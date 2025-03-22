@@ -1,6 +1,15 @@
 #include "gnw.h"
 #include "special_lw.c"
 
+// ^ Include the gnw.h header file to access mex.h, and the function signatures for special_lw
+// ^ Include the special_lw.c c file to import the functions defined in there to this primary file
+
+
+// The move logic struct, copied from mexTool.
+// It contains a list of the fighter's special states and what callbacks/data to use for them
+// In this example, we replace the IASA (interruptible as soon as) callback for ground & air down special at lines 430, and 465
+// When creating fully custom states though, often many fields such as the 
+// AnimationID, AnimationCallback, IASACallback, PhysicsCallback, and CollisionCallback are completely changed and replaced with custom functions
 __attribute__((used))
 static struct FtState move_logic[] = {
 	// State: 341 - Attack11
