@@ -10,8 +10,7 @@
 // In this example, we replace the IASA (interruptible as soon as) callback for ground & air down special at lines 430, and 465
 // When creating fully custom states though, often many fields such as the 
 // AnimationID, AnimationCallback, IASACallback, PhysicsCallback, and CollisionCallback are completely changed and replaced with custom functions
-__attribute__((used))
-static struct FtState move_logic[] = {
+struct FtState move_logic[] = {
 	// State: 341 - Attack11
 	{
 		46,         // AnimationID
