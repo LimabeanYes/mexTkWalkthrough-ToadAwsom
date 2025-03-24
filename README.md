@@ -2,4 +2,4 @@ This does not include mexTk or anything, just stuff involved with this tutorial 
 
 Just copy paste where necessary
 
-See related guide - thingy here https://docs.google.com/document/d/193CN4xNsuXVp0fFRH4sSglaMk7tKxqa0l7F7bCYPVX8/edit?usp=sharing
+See related guide - thingy here https://docs.google.com/document/d/1PzPyZD1AIqphn5Y4CSZbUnN3H-EkYRWGcTkj9lCEuuc/edit?usp=sharing
