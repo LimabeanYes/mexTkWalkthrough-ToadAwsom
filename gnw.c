@@ -67,7 +67,7 @@ void specialLw_iasaCallback(GOBJ *gobj) {
 // This callback is much the same as the previous one.
 void specialAirLw_iasaCallback(GOBJ *gobj) {
 	if (Fighter_IASACheck_JumpAerial(gobj)) {
-		// Instead of entering jumpsquat, we enter fall, aka JumpAerial.We could use 
+		// Instead of entering jumpsquat, we enter double jump, aka JumpAerial.
 		// We could use ActionStateChange for this, but melee provides a convenient way, so we use it!
 		Fighter_EnterJumpAerial(gobj);
 	}
