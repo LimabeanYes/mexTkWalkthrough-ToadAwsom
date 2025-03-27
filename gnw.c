@@ -1,16 +1,94 @@
-#include "gnw.h"
-#include "special_lw.c"
+// We often want to call internal melee functions located in the iso.
+// Including this file (called the mex header) will the compiler how to call those functions.
+//
+// For example, the mex headers contain a function prototype for `HSD_Randi`.
+// It looks like this: `int HSD_Randi(int n);`
+// This tells the compiler that there is a symbol called HSD_Randi somewhere else that we want to use,
+// which takes in an int and returns an int.
+// In the case of HSD_Randi, it takes in a positive number `n` and returns a random value in 0..n.
+// 
+// When we compile to a dat file, MexTK will take a look at all the melee functions we used
+// and map them to the location in the iso they should be called at.
+// You can see this map for yourself in the melee.link file in the MexTK repository. 
+#include "mex.h"
 
-// ^ Include the gnw.h header file to access mex.h, and the function signatures for special_lw
-// ^ Include the special_lw.c c file to import the functions defined in there to this primary file
 
 
-// The move logic struct, copied from mexTool.
-// It contains a list of the fighter's special states and what callbacks/data to use for them
-// In this example, we replace the IASA (interruptible as soon as) callback for ground & air down special at lines 430, and 465
+// This IASA (interruptible as soon as) callback is for GNW's grounded down special.
+// We will program this to allow GNW to jump cancel out of the move.
+// This function is called every frame that GNW is in the down special state.
+//
+// This function takes in a GOBJ* (pointer to a gobj) and returns void (nothing).   
+// gobj is short for a Game or General Object.  
+// Every object (item, stage, effect, character) is a gobj,
+// which makes gobjs a very convinient thing to pass around.
+// IASA callbacks always pass us the GNW's gobj to use.
+void specialLw_iasaCallback(GOBJ *gobj) {
+
+	// To allow GNW to jump cancel down special, we need to check if the player jumped. 
+	// Thankfully, the mex header provides an internal melee function that does exactly this!
+	// The `int Fighter_IASACheck_JumpF(GOBJ *gobj)` function 
+	// Checks if the user inputs a jump using an internal melee function.
+	// This will return true if the player jumped this frame.
+	if (Fighter_IASACheck_JumpF(gobj)) {
+
+		// If there is a jump input, change the fighter state to KNEE_BEND (jumpsquat) using the ActionStateChange internal melee function.
+		// `void ActionStateChange(float startFrame, float animSpeed, float animBlend, GOBJ *fighter, int stateID, int flags1, GOBJ *alt_state_source);`
+		// We pass a lot of parameters here, but most are irrelevant. 
+		// The two key ones are fighter and stateID.
+		// These say: "Who's state do we change?" and "What do we change it to?" respectively. 
+		// ASID stands for Animation State ID, and you can see the full list of ASIDs in fighter.h in the MexTK repository. 
+		ActionStateChange(0.0f, 1.0f, 0.0f, gobj, ASID_KNEEBEND, 0, 0);
+
+		// One more thing to note:  
+		// The FighterData struct is super important for character modding.
+		// You can get this from a character's gobj with `FighterData *data = gobj->userdata;`.
+		// This struct contains all sorts of data for a character that you can use and modify.
+		// Take a look at the FighterData struct in fighters.h in the MexTK repository to see what's in there (it's huge!).  
+	}
+
+	// Now because we overwrote GNW's usual IASA callback, his normal IASA code won't run.
+	// However, we can still call it ourselves! 
+	// 
+	// The function pointer syntax here is a little wacky. 
+	// This just says to the compiler: "There is a function at address 0x8014D1AC. Give it the name specialLw_iasaCallback_vanilla". 
+	// 
+	// If the MexTK headers provided this function, then we wouldn't need to do this.
+	// But since it doesn't, this workaround lets us call any melee function in the game if we know its address. 
+	void (*gnw_specialLw_iasaCallback_vanilla)(GOBJ *gobj) = (void*)0x8014D1AC;
+	
+	// Now that we've told the compiler about that function, we can call it ourselves. 
+	// This will restore vanilla IASA behavior. 
+	gnw_specialLw_iasaCallback_vanilla(gobj);
+}
+
+
+
+// This callback is much the same as the previous one.
+void specialAirLw_iasaCallback(GOBJ *gobj) {
+	if (Fighter_IASACheck_JumpAerial(gobj)) {
+		// Instead of entering jumpsquat, we enter double jump, aka JumpAerial.
+		// We could use ActionStateChange for this, but melee provides a convenient way, so we use it!
+		Fighter_EnterJumpAerial(gobj);
+	}
+	void (*gnw_specialAirLw_iasaCallback_vanilla)(GOBJ *gobj) = (void*)0x8014D264;
+	gnw_specialAirLw_iasaCallback_vanilla(gobj);
+}
+
+
+
+// The move logic struct.
+// It contains a list of the fighter's special states and what callbacks/data to use for them.
+// In this example, we replace the IASA (interruptible as soon as) callback for ground & air down special at the indicated lines.
 // When creating fully custom states though, often many fields such as the 
-// AnimationID, AnimationCallback, IASACallback, PhysicsCallback, and CollisionCallback are completely changed and replaced with custom functions
-struct FtState move_logic[] = {
+// AnimationID, AnimationCallback, IASACallback, PhysicsCallback, and CollisionCallback are completely changed and replaced with custom functions.
+//
+// Normally, this table will not contain non-special attacks such as jabs, tilts, aerials, or smash attacks.
+// However, GNW is special - many of his regular attacks are programmed as special moves, so they appear here.
+// 
+// You can see a list of every special action state in the game here:
+// https://docs.google.com/spreadsheets/d/1Nu3hSc1U6apOhU4JIJaWRC4Lj0S1inN8BFsq3Y8cFjI/edit?gid=1923544852#gid=1923544852 
+FtState move_logic[] = {
 	// State: 341 - Attack11
 	{
 		46,         // AnimationID
@@ -426,7 +504,7 @@ struct FtState move_logic[] = {
 		0x15,       // AttackID
 		0x0,        // BitFlags
 		0x8014D014, // AnimationCallback
-		specialLw_iasaCallback, // IASACallback
+		specialLw_iasaCallback, // IASACallback ------------------------------------ MODIFIED -------------------------------------------
 		0x8014D31C, // PhysicsCallback
 		0x8014D3B4, // CollisionCallback
 		0x800761C8, // CameraCallback
@@ -462,7 +540,7 @@ struct FtState move_logic[] = {
 		0x15,       // AttackID
 		0x0,        // BitFlags
 		0x8014D0E0, // AnimationCallback
-		specialAirLw_iasaCallback, // IASACallback
+		specialAirLw_iasaCallback, // IASACallback ------------------------------------ MODIFIED -------------------------------------------
 		0x8014D350, // PhysicsCallback
 		0x8014D3F0, // CollisionCallback
 		0x800761C8, // CameraCallback
